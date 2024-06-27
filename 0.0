@@ -1,0 +1,34 @@
+function deleteAllConditionalFormatting() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+  // Clear all conditional formatting rules on the sheet
+  sheet.clearConditionalFormatRules();
+
+  Logger.log("Deleted all conditional formatting rules.");
+  createConditionalFormattingRule()
+}
+
+
+function createConditionalFormattingRule() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  
+  // Clear existing conditional formatting rules to start fresh
+  sheet.clearConditionalFormatRules();
+  
+  // Specify the range to apply conditional formatting (column B)
+  var range = sheet.getRange("B:B");
+  
+  // Specify the conditional formatting rule
+  var rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$A1="GOOD"')
+    .setBackground("#FFA500") // Orange background color
+    .setRanges([range])
+    .build();
+  
+  // Apply the conditional formatting rule to the sheet
+  var rules = sheet.getConditionalFormatRules();
+  rules.push(rule);
+  sheet.setConditionalFormatRules(rules);
+  
+  Logger.log("Created conditional formatting rule for column B when A cells are 'GOOD'.");
+}
