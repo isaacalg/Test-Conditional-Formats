@@ -1,0 +1,252 @@
+/** 
+ * Menu UI
+ */
+
+function menu() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu('Update Sheet')
+    .addItem('Update', 'main')
+    .addToUi();
+}
+
+
+/**
+ * Main Function 
+ * Executes all formulas and conditional formats
+ */
+function main(){
+  /*--- FORMULAS ---*/
+  clearAllFormulas()
+  setLabelType()
+  setFloors()
+  /*--- Conditionals ---*/
+  clearAllConditionalFormats()
+  setConditionalFormatForDuplicate();
+  setConditionalFormatForIncorrectLabel()
+  setConditionalFormatForAvailableLabel();
+  setConditionalFormatForCellD()
+  setConditionalFormatForCellE()
+  setConditionalFormatForCellF()
+
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('Script Execution', 'Update has completed successfully!', ui.ButtonSet.OK);
+}
+
+
+/** 
+ * Trigger that captures all cell edits, apply timestamp & user email address
+ */
+function myOnEdit(e) {
+  const sheet = e.source.getActiveSheet(); // Get active sheet
+  const range = e.range; //range of active cell
+  const editedRange = e.range;
+  const col = editedRange.getColumn();
+  const startRow = range.getRow(); //row edited range starts
+  const startCol = range.getColumn(); //column edited range starts
+  const numRows = range.getNumRows(); //total rows in edited range
+  
+  // Convert to uppercase if edited in columns A, E, or F
+  if (startRow != 1 && [1, 5, 6].includes(col)) {
+    convertToUppercase(sheet, editedRange);
+  }
+
+  if (startRow != 1 && startCol < 7) {
+  const timeStamp = new Date();
+  const modifiedBy = Session.getActiveUser().getEmail();
+
+  for (let row = 0; row < numRows; row++) {
+    const rowA = sheet.getRange(startRow + row, 1).getValue();
+    const rowD = sheet.getRange(startRow + row, 4).getValue();
+    const rowE = sheet.getRange(startRow + row, 5).getValue();
+    const rowF = sheet.getRange(startRow + row, 6).getValue();
+    // Check if cell A in the current row is not empty
+    if (rowA !== '' || rowE !== '' || rowE !== '' || rowF !== '') {
+      sheet.getRange(startRow + row, 7).setValue(timeStamp);
+      sheet.getRange(startRow + row, 8).setValue(modifiedBy);
+    }
+  }
+}
+}
+
+/**
+ * Converts cell values to Uppercases
+ */
+function convertToUppercase(sheet, range) {
+  const values = range.getValues();
+  for (let i = 0; i < values.length; i++) {
+    for (let j = 0; j < values[i].length; j++) {
+      values[i][j] = values[i][j].toString().toUpperCase();
+    }
+  }
+  range.setValues(values);
+}
+
+
+/*------------------ FORMULAS ------------------*/
+
+function clearAllFormulas() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var range = sheet.getDataRange(); // Get the entire data range
+  var formulas = range.getFormulas(); // Get all formulas in the range
+
+  // Iterate through each cell in the range
+  for (var i = 0; i < formulas.length; i++) {
+    for (var j = 0; j < formulas[i].length; j++) {
+      if (formulas[i][j]) {
+        var cell = range.getCell(i + 1, j + 1);
+        var value = cell.getValue();
+        cell.setValue(value); // Replace the formula with its current value
+      }
+    }
+  }
+}
+
+
+function setLabelType() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const lastRow = sheet.getMaxRows(); // Get the maximum number of rows
+  const range = sheet.getRange(2, 2, lastRow - 1, 1); // Get the range for column B from row 2 to the last row
+
+  // Generate the formulas array
+  const formulas = [];
+  for (let i = 2; i <= lastRow; i++) {
+    const formula = '=IF(A' + i + '<>"", ' +
+                    'IF(COUNTIF($A$2:$A, A' + i + ') > 1, "DUPLICATE LABEL", ' +
+                       'IF(REGEXMATCH(A' + i + ', "^(CR|CAM|I|M) [A-Za-z0-9]+-[0-9]{2,}$"), ' +
+                          'IF(LEFT(A' + i + ', 2)="CR", "Access", ' +
+                             'IF(LEFT(A' + i + ', 3)="CAM", "CCTV", ' +
+                                'IF(LEFT(A' + i + ', 1)="I", "Intercom", ' +
+                                   'IF(LEFT(A' + i + ', 1)="M", "Monitor point")' +
+                                ')' +
+                             ')' +
+                          '), ' +
+                       '"INCORRECT LABEL")' +
+                    '), ' +
+                 '""' +
+               ')';
+    formulas.push([formula]);
+  }
+
+  // Set the formulas for the entire range
+  range.setFormulas(formulas);
+}
+
+
+function setFloors() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const lastRow = sheet.getLastRow();
+
+  for (let i = 2; i <= lastRow; i++) {
+    const cellValue = sheet.getRange("C" + i).getValue();
+    if (cellValue === "") { // Check if the cell is blank
+      const formula = '=IF(A' + i + ' <> "", REGEXEXTRACT(A' + i + ', "\\s([^\\s-]+)-"), "")';
+      sheet.getRange("C" + i).setFormula(formula);
+    }
+  }
+}
+
+
+
+ /*------------------ Conditonal Formats ------------------*/
+
+
+function clearAllConditionalFormats() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  
+  sheet.clearConditionalFormatRules();
+}
+
+
+function setConditionalFormatForDuplicate() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const lastRow = sheet.getLastRow();
+  const range = sheet.getRange("A2:B" + lastRow); // Adjusted range to include both columns A and B
+
+  const rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$B2="DUPLICATE LABEL"') // Adjusted formula to start from row 2
+    .setBackground("#FF6347") // Set background color to red
+    .setRanges([range]) // Apply the rule to the range A2:BlastRow
+    .build();
+
+  const rules = sheet.getConditionalFormatRules();
+  rules.push(rule);
+  sheet.setConditionalFormatRules(rules);
+}
+
+function setConditionalFormatForIncorrectLabel() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const lastRow = sheet.getLastRow();
+  const range = sheet.getRange("A2:B" + lastRow); // Adjusted range to include both columns A and B
+
+  const rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$B2="INCORRECT LABEL"') // Adjusted formula to start from row 2
+    .setBackground("#FFA500") // Set background color to orange
+    .setRanges([range]) // Apply the rule to the range A2:BlastRow
+    .build();
+
+  const rules = sheet.getConditionalFormatRules();
+  rules.push(rule);
+  sheet.setConditionalFormatRules(rules);
+}
+
+
+
+function setConditionalFormatForAvailableLabel() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const range = sheet.getRange('A1:A');
+  
+  const rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$D1="Available"')
+    .setBackground("#b6d7a8") // Green background color
+    .setRanges([range])
+    .build();
+  
+  const rules = sheet.getConditionalFormatRules();
+  rules.push(rule);
+  sheet.setConditionalFormatRules(rules);
+}
+
+
+function setConditionalFormatForCellD() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const range = sheet.getRange('D1:D')
+  const rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied(`=AND($A1<>"", $D1="")`)
+    .setBackground("#fbbc04") // Green background color
+    .setRanges([range])
+    .build();
+  
+  const rules = sheet.getConditionalFormatRules();
+  rules.push(rule);
+  sheet.setConditionalFormatRules(rules);
+}
+
+
+function setConditionalFormatForCellE() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const range = sheet.getRange('E1:E');
+  const rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied(`=AND($A1<>"", $E1="")`)
+    .setBackground("#fbbc04") // Green background color
+    .setRanges([range])
+    .build();
+  
+  const rules = sheet.getConditionalFormatRules();
+  rules.push(rule);
+  sheet.setConditionalFormatRules(rules);
+}
+
+
+function setConditionalFormatForCellF() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const range = sheet.getRange('F2:F');
+  const rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND($A2<>"", F2="")')
+    .setBackground("#fbbc04") // Orange background color
+    .setRanges([range]) // Apply from row 2 to avoid the header
+    .build();
+  
+  const rules = sheet.getConditionalFormatRules();
+  rules.push(rule);
+  sheet.setConditionalFormatRules(rules);
+}
