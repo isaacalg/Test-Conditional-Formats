@@ -1,0 +1,22 @@
+function createOnEditTrigger() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const existingTriggers = ScriptApp.getProjectTriggers();
+
+  // Check if onEdit trigger already exists
+  let onEditTriggerExists = false;
+  for (let i = 0; i < existingTriggers.length; i++) {
+    const trigger = existingTriggers[i];
+    if (trigger.getEventType() == ScriptApp.EventType.ON_EDIT) {
+      onEditTriggerExists = true;
+      break;
+    }
+  }
+
+  // If onEdit trigger doesn't exist, create it
+  if (!onEditTriggerExists) {
+    ScriptApp.newTrigger('callMyOnEditLibrary')
+      .forSpreadsheet(ss)
+      .onEdit()
+      .create();
+  }
+}
