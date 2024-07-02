@@ -20,3 +20,10 @@ function createOnEditTrigger() {
       .create();
   }
 }
+
+
+"oauthScopes": [
+    "https://www.googleapis.com/auth/script.scriptapp",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/script.external_request"
+    ],
