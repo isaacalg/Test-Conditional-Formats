@@ -1,0 +1,13 @@
+function libraryMenu(){
+  LLR_Lib.menu();
+}
+
+function libraryOnOpen(){
+  LLR_Lib.menu();
+  LLR_Lib.main();
+}
+
+
+function libraryOnEdit(e){
+  LLR_Lib.myOnEdit(e)
+}
